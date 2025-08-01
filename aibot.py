@@ -1,9 +1,8 @@
 import streamlit as st
+import random
+import time
 
-import requests
-import json
-
-ef ai_ask(prompt, data=None, temperature=0.5, max_tokens=250, model="mistral-small-latest", api_key=None, api_url="https://api.mistral.ai/v1/chat/completions"):
+def ai_ask(prompt, data=None, temperature=0.5, max_tokens=250, model="mistral-small-latest", api_key=None, api_url="https://api.mistral.ai/v1/chat/completions"):
     if api_key is None or api_url is None:
         if "idToken" in globals():
             api_key = globals()["idToken"]
@@ -48,9 +47,7 @@ ef ai_ask(prompt, data=None, temperature=0.5, max_tokens=250, model="mistral-sma
         return f"Error: {str(e)}"
 
 
-
-st.title("AI Bot")
-
+# Streamed response emulator
 def response_generator():
     response = ai_ask("Pretend you are a very friendly and helpful person.  Please provide a response given the provided context.  Please provide the response only with no before or after commentary.",
                       data=st.session_state.messages,
@@ -59,6 +56,7 @@ def response_generator():
         yield word + " "
         time.sleep(0.05)
 
+st.title("Simple chat")
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -68,19 +66,20 @@ if "messages" not in st.session_state:
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-# React to user input
+
+# Accept user input
 if prompt := st.chat_input("What is up?"):
     # Display user message in chat message container
-    st.chat_message("user").markdown(prompt)
-
+    with st.chat_message("user"):
+        st.markdown(prompt)
     # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    response = f"Echo: {prompt}"
-    # Display assistant response in chat message container
-    
-    with st.chat_message("assistant"):
-        st.markdown(response)
-    
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
+# Display assistant response in chat message container
+with st.chat_message("assistant"):
+    response = st.write_stream(response_generator())
+
+# Add assistant response to chat history
+st.session_state.messages.append({"role": "assistant", "content": response})
+
+
